@@ -106,6 +106,9 @@
 	EXTERN pid_t sys_setpgrp(void);
 	EXTERN int sys_setuid(pid_t uid);
 	EXTERN pid_t sys_wait(int *stat_loc);
+	EXTERN int sys_semget(unsigned);
+	EXTERN int sys_semctl(int, int, int);
+	EXTERN int sys_semop(int,int);
 
 	/*
 	 * Duplicates a file descriptor.
