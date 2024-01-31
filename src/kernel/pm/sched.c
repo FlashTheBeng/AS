@@ -59,10 +59,246 @@ PUBLIC void resume(struct process *proc)
 		sched(proc);
 }
 
+PUBLIC void priority(void)
+{
+    struct process *p;    /* Working process.     */
+    struct process *next; /* Next process to run. */
+
+    /* Re-schedule process for execution. */
+    if (curr_proc->state == PROC_RUNNING)
+        sched(curr_proc);
+
+    /* Remember this process. */
+    last_proc = curr_proc;
+
+    /* Check alarm. */
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+    {
+        /* Skip invalid processes. */
+        if (!IS_VALID(p))
+            continue;
+
+        /* Alarm has expired. */
+        if ((p->alarm) && (p->alarm < ticks))
+            p->alarm = 0, sndsig(p, SIGALRM);
+    }
+
+    /* Choose a process to run next. */
+    next = IDLE;
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+        {
+            if (p->state != PROC_READY){
+                    continue;
+        }
+            int prioP = p->priority + (p->nice) - p->counter;
+            int prioNext = next->priority + (next->nice) - next->counter;
+
+            if(prioP < prioNext){
+                if(p != IDLE){
+                       next->counter++;
+                    next = p;
+                }
+            } else if (prioP == prioNext){
+                if ((p->utime + p->ktime) < (next->utime + next->ktime)){
+                    if(p!=IDLE){
+                        next->counter++;
+                        next = p;
+                    }
+                } else {
+                    if(p!=IDLE){
+                        p->counter++;
+                    }
+                }
+            } else {
+                    if (p!=IDLE) {
+                        p->counter++;
+                    }
+            }
+
+        }
+
+    /* Switch to next process. */
+    next->priority = PRIO_USER;
+    next->state = PROC_RUNNING;
+    next->counter = PROC_QUANTUM;
+    if (curr_proc != next)
+        switch_to(next);
+}
+
+
+
+PUBLIC void lottery(void)
+{
+	struct process *p;    /* Working process.     */
+    struct process *next; /* Next process to run. */
+
+    /* Re-schedule process for execution. */
+    if (curr_proc->state == PROC_RUNNING)
+        sched(curr_proc);
+
+    /* Remember this process. */
+    last_proc = curr_proc;
+	int total_nb_tickets = 0;
+
+    /* Check alarm. */
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+    {
+        /* Skip invalid processes. */
+        if (!IS_VALID(p))
+            continue;
+
+        /* Alarm has expired. */
+        if ((p->alarm) && (p->alarm < ticks)){
+			p->alarm = 0, sndsig(p, SIGALRM);
+		}
+        
+		total_nb_tickets += 100 + 40 - (p->priority) - (p->nice)+p->counter;
+    }
+	
+
+	/* Choose a process to run next. */
+	next = IDLE;
+	int plage_debut = 0;
+	int ticket_gagnant = ticks % total_nb_tickets;
+	
+	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		if (p->state != PROC_READY)
+			continue;
+
+		int plage_fin = plage_debut + 100 + 40 - (p->priority) - (p->nice)+p->counter;
+		
+		if(plage_fin > ticket_gagnant){
+			if(next != IDLE) next->counter++;
+			next = p;
+		} else {
+			if(p != IDLE){
+				p->counter++;
+			}
+			
+		}
+		plage_debut = plage_fin;
+	}
+
+	/* Switch to next process. */
+    next->priority = PRIO_USER;
+	next->state = PROC_RUNNING;
+	next->counter = PROC_QUANTUM;
+	if (curr_proc != next)
+		switch_to(next);
+}
+
+
+PUBLIC void random(void)
+{
+    struct process *p;    /* Working process.     */
+    struct process *next; /* Next process to run. */
+
+    /* Re-schedule process for execution. */
+    if (curr_proc->state == PROC_RUNNING)
+        sched(curr_proc);
+
+    /* Remember this process. */
+    last_proc = curr_proc;
+    int tot = 0;
+    /* Check alarm. */
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+    {
+        /* Skip invalid processes. */
+        if (!IS_VALID(p))
+            continue;
+
+        /* Alarm has expired. */
+        if ((p->alarm) && (p->alarm < ticks))
+            p->alarm = 0, sndsig(p, SIGALRM);
+                
+        tot++;
+    }
+
+    /* Choose a process to run next. */
+    next = IDLE;
+    int poswin = ticks % tot;
+    int posact = 0;
+    // next->counter = 0;
+    for (p = FIRST_PROC; p <= LAST_PROC; p++)
+        {
+            if (p->state != PROC_READY){
+                    continue;
+        }
+            if (posact == poswin){
+                if(p != IDLE){
+                    next = p;
+                }
+            }
+            posact++;
+
+        }
+
+    /* Switch to next process. */
+    next->priority = PRIO_USER;
+    next->state = PROC_RUNNING;
+    next->counter = PROC_QUANTUM;
+    if (curr_proc != next)
+        switch_to(next);
+}
+
+
+
+PUBLIC void roundRobin(void)
+{
+	struct process *p;    /* Working process.     */
+	struct process *next; /* Next process to run. */
+
+	/* Re-schedule process for execution. */
+	if (curr_proc->state == PROC_RUNNING)
+		sched(curr_proc);
+
+	/* Remember this process. */
+	last_proc = curr_proc;
+
+	/* Check alarm. */
+	for (p = FIRST_PROC; p <= LAST_PROC; p++)
+	{
+		/* Skip invalid processes. */
+		if (!IS_VALID(p))
+			continue;
+
+		/* Alarm has expired. */
+		if ((p->alarm) && (p->alarm < ticks))
+			p->alarm = 0, sndsig(p, SIGALRM);
+	}
+
+	/* Choose a process to run next. */
+	p = last_proc;
+	next = IDLE;
+
+	for(long unsigned int i = 0; i <= sizeof(proctab); i++){
+
+		if(p == LAST_PROC){
+			p = FIRST_PROC;
+		} else {
+			p += 1;
+		}
+
+		if (p->state == PROC_READY){
+			next = p;
+			break;
+		}
+	}
+
+	/* Switch to next process. */
+	next->priority = PRIO_USER;
+	next->state = PROC_RUNNING;
+	next->counter = PROC_QUANTUM;
+	if (curr_proc != next)
+		switch_to(next);
+}
+
+
 /**
  * @brief Yields the processor.
  */
-PUBLIC void yield(void)
+PUBLIC void fifo(void)
 {
 	struct process *p;    /* Working process.     */
 	struct process *next; /* Next process to run. */
@@ -105,7 +341,7 @@ PUBLIC void yield(void)
 		}
 
 		/*
-		 * Increment waiting
+		 * Increment waitingp->counter++;
 		 * time of process.
 		 */
 		else
@@ -119,3 +355,16 @@ PUBLIC void yield(void)
 	if (curr_proc != next)
 		switch_to(next);
 }
+
+
+
+
+
+
+PUBLIC void yield(void){
+	priority();
+	// lottery();
+	// roundRobin();
+	// fifo();
+}
+
