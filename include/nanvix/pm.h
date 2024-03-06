@@ -286,6 +286,8 @@
 	EXTERN pid_t next_pid;
 	EXTERN unsigned nprocs;
 
+	
+
 #endif /* _ASM_FILE */
 
 #endif /* NANVIX_PM_H_ */

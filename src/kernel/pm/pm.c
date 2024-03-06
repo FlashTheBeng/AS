@@ -30,6 +30,7 @@
 #include <sys/stat.h>
 #include <signal.h>
 #include <limits.h>
+#include <nanvix/sem.h>
 
 /**
  * @brief Idle process page directory.
@@ -73,6 +74,13 @@ PUBLIC void pm_init(void)
 {
 	int i;             /* Loop index.      */
 	struct process *p; /* Working process. */
+	
+	for(int i=0; i< SEM_MAX; i++){
+		tab_semaphore[i].is_valid = 0;
+		tab_semaphore[i].key = 0;
+		tab_semaphore[i].counter = 0;
+		tab_semaphore[i].waiting_list_process = NULL;
+	}
 
 	/* Initialize the process table. */
 	for (p = FIRST_PROC; p <= LAST_PROC; p++)
