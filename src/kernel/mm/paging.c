@@ -312,8 +312,13 @@ PRIVATE int allocf(void)
 				continue;
 
 			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
+			struct pte *tmp_pte = getpte(curr_proc, frames[i = (OLDEST(i, oldest))].addr);
+			if ((oldest < 0) || ((OLDEST(i, oldest)) && tmp_pte->accessed == 0)) {
 				oldest = i;
+			} else if(tmp_pte->accessed == 1){
+				tmp_pte->accessed = 0;
+			}
+				
 		}
 	}
 
@@ -321,9 +326,14 @@ PRIVATE int allocf(void)
 	if (oldest < 0)
 		return (-1);
 
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
+
+	struct pte *pte = getpte(curr_proc, frames[i = oldest].addr);
+	if (swap_out(curr_proc, frames[i = oldest].addr)){
 		return (-1);
+	}
+
+	allocSecondChange();
+	
 
 found:
 
