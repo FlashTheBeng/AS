@@ -332,7 +332,7 @@ PRIVATE int allocf(void)
 		return (-1);
 	}
 
-	allocSecondChange();
+	allocf();
 	
 
 found:
