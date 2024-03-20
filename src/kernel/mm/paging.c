@@ -325,9 +325,12 @@ PRIVATE int allocf(void)
 		frames[oldest].age = ticks;
 		goto boucle;
 	} else {
-		if (swap_out(curr_proc, frames[i = oldest].addr)){
-			return (-1);
+		if(pte->dirty){
+			if (swap_out(curr_proc, frames[oldest].addr)){
+				return (-1);
+			}
 		}
+		i = oldest;
 	}
 
 
