@@ -10,7 +10,7 @@ PUBLIC int sys_semop(int semid, int op){
             //up
             if(op > 0){
                 if(tab_semaphore[i].counter == 0){
-                    wakeup(&tab_semaphore[i].waiting_list_process);
+                    wakeup(tab_semaphore[i].waiting_list_process);
                 } else {
                     tab_semaphore[i].counter++;
                 }
@@ -20,7 +20,7 @@ PUBLIC int sys_semop(int semid, int op){
                 if(tab_semaphore[i].counter > 0){
                     tab_semaphore[i].counter--;
                 } else{
-                    sleep(&tab_semaphore[i].waiting_list_process, curr_proc->priority);
+                    sleep(tab_semaphore[i].waiting_list_process, curr_proc->priority);
                 }
             }
             enable_interrupts();

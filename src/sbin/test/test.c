@@ -84,6 +84,8 @@ static int swap_test(void)
 
 				for (int k = 0; k < N; k++)
 					c[i*N + j] += a[i*N + k]*b[k*N + j];
+					
+					
 			}
 		}
 	}
