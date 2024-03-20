@@ -296,6 +296,8 @@ PRIVATE int allocf(void)
 
 	#define OLDEST(x, y) (frames[x].age < frames[y].age)
 
+	unsigned virtual_time = curr_proc->utime + curr_proc->ktime;
+
 	/* Search for a free frame. */
 	oldest = -1;
 	for (i = 0; i < NR_FRAMES; i++)
@@ -303,7 +305,7 @@ PRIVATE int allocf(void)
 		/* Found it. */
 		if (frames[i].count == 0)
 			goto found;
-
+		
 		/* Local page replacement policy. */
 		if (frames[i].owner == curr_proc->pid)
 		{
@@ -311,19 +313,43 @@ PRIVATE int allocf(void)
 			if (frames[i].count > 1)
 				continue;
 
-			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
-				oldest = i;
+			struct pte *pte = getpte(curr_proc, frames[i].addr);
+	
+			if(pte->accessed == 1) {
+				pte->accessed = 0;
+				frames[i].age = virtual_time;	
+			}
+			if(pte->accessed == 0) {
+				unsigned tau = 20;
+				unsigned diff = virtual_time - frames[i].age;
+				if(diff > tau){
+					if(swap_out(curr_proc, frames[i].addr)){
+						return -1;
+					}
+				}
+
+				if(diff <= tau){
+					if(oldest == -1 || OLDEST(i, oldest))
+						oldest = i;
+				}
+			}
+			
 		}
+
 	}
 
-	/* No frame left. */
-	if (oldest < 0)
-		return (-1);
-
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
-		return (-1);
+	if(oldest != -1){
+		if(swap_out(curr_proc, frames[oldest].addr)){
+			return -1;
+		}
+	
+	} else {
+		int randIndex = virtual_time % NR_FRAMES;
+		if(swap_out(curr_proc, frames[randIndex].addr)){
+			return -1;
+		}
+	}
+	
 
 found:
 
