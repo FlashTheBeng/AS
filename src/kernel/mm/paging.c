@@ -289,48 +289,48 @@ PRIVATE struct
  * @returns Upon success, the number of the frame is returned. Upon failure, a
  *          negative number is returned instead.
  */
-PRIVATE int allocf(void)
-{
-	int i;      /* Loop index.  */
-	int oldest; /* Oldest page. */
+int clock_pointer=0;
 
-	#define OLDEST(x, y) (frames[x].age < frames[y].age)
+PRIVATE int allocf(void){
+//    int swap = -1; //Offset of the frame to swap with
+    struct pte *pte_temp;
+//    int i;      /* Loop index.  */
+    
 
-	/* Search for a free frame. */
-	oldest = -1;
-	for (i = 0; i < NR_FRAMES; i++)
-	{
-		/* Found it. */
-		if (frames[i].count == 0)
-			goto found;
+    while(1){
 
-		/* Local page replacement policy. */
-		if (frames[i].owner == curr_proc->pid)
-		{
-			/* Skip shared pages. */
-			if (frames[i].count > 1)
-				continue;
+        if (frames[clock_pointer].count == 0){
+            goto emptyfound;
+        }
 
-			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
-				oldest = i;
-		}
-	}
+        if (frames[clock_pointer].owner == curr_proc->pid){
 
-	/* No frame left. */
-	if (oldest < 0)
-		return (-1);
+            if(frames[clock_pointer].count > 1){ //Skip shared pages
+                clock_pointer = (clock_pointer + 1)%NR_FRAMES;
+                continue;
+            }
 
-	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
-		return (-1);
-
-found:
-
-	frames[i].age = ticks;
-	frames[i].count = 1;
-
-	return (i);
+            pte_temp = getpte(curr_proc,frames[clock_pointer].addr);
+            if(pte_temp->accessed == 1){//If R bit is set, we clear it and go to the next page
+                pte_temp->accessed = 0;
+            }else{ //If R bit is clear, we evict the page
+                clock_pointer = (clock_pointer + 1)%NR_FRAMES;
+                goto found;
+            }
+        }
+        clock_pointer = (clock_pointer + 1)%NR_FRAMES; //Insure that we are virtually in a ring
+    }
+found:     
+    /* Swap page out. */
+    if (swap_out(curr_proc, frames[clock_pointer].addr)){
+        return (-1);
+    }
+emptyfound:
+    
+    frames[clock_pointer].age = ticks;
+    frames[clock_pointer].count = 1;
+    getpte(curr_proc,frames[clock_pointer].addr)->accessed = 1;
+    return (clock_pointer);
 }
 
 /**
