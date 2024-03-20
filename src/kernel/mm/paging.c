@@ -295,45 +295,48 @@ PRIVATE int allocf(void)
 	int oldest; /* Oldest page. */
 
 	#define OLDEST(x, y) (frames[x].age < frames[y].age)
-
-	/* Search for a free frame. */
-	oldest = -1;
-	for (i = 0; i < NR_FRAMES; i++)
-	{
-		/* Found it. */
-		if (frames[i].count == 0)
-			goto found;
-
-		/* Local page replacement policy. */
-		if (frames[i].owner == curr_proc->pid)
+	
+	boucle:
+		/* Search for a free frame. */
+		oldest = -1;
+		for (i = 0; i < NR_FRAMES; i++)
 		{
-			/* Skip shared pages. */
-			if (frames[i].count > 1)
-				continue;
+			/* Found it. */
+			if (frames[i].count == 0)
+				goto found;
 
-			/* Oldest page found. */
-			struct pte *tmp_pte = getpte(curr_proc, frames[i = (OLDEST(i, oldest))].addr);
-			if ((oldest < 0) || ((OLDEST(i, oldest)) && tmp_pte->accessed == 0)) {
-				oldest = i;
-			} else if(tmp_pte->accessed == 1){
-				tmp_pte->accessed = 0;
-			}
+			/* Local page replacement policy. */
+			if (frames[i].owner == curr_proc->pid)
+			{
+				/* Skip shared pages. */
+				if (frames[i].count > 1)
+					continue;
+
+				/* Oldest page found. */
+				if ((oldest < 0) || (OLDEST(i, oldest)))
+					oldest = i;
 				
+			}
+		}
+
+	struct pte *pte = getpte(curr_proc, frames[oldest].addr);
+	if(pte->accessed){
+		pte->accessed = 0;
+		frames[oldest].age = ticks;
+		goto boucle;
+	} else {
+		if (swap_out(curr_proc, frames[i = oldest].addr)){
+			return (-1);
 		}
 	}
 
-	/* No frame left. */
 	if (oldest < 0)
 		return (-1);
 
-
-	struct pte *pte = getpte(curr_proc, frames[i = oldest].addr);
-	if (swap_out(curr_proc, frames[i = oldest].addr)){
+	if (swap_out(curr_proc, frames[oldest].addr)){
 		return (-1);
 	}
 
-	allocf();
-	
 
 found:
 
