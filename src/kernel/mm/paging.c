@@ -272,6 +272,8 @@ PUBLIC void putkpg(void *kpg)
 /* Number of page frames. */
 #define NR_FRAMES (UMEM_SIZE/PAGE_SIZE)
 
+unsigned tau = 100;
+
 /**
  * @brief Page frames.
  */
@@ -316,11 +318,9 @@ PRIVATE int allocf(void)
 			struct pte *pte = getpte(curr_proc, frames[i].addr);
 	
 			if(pte->accessed == 1) {
-				// pte->accessed = 0;
 				frames[i].age = virtual_time;	
 			}
 			if(pte->accessed == 0) {
-				unsigned tau = 100;
 				unsigned diff_time = virtual_time - frames[i].age;
 				if(diff_time > tau){
 					if(swap_out(curr_proc, frames[i].addr)){
