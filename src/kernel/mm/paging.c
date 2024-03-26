@@ -316,19 +316,17 @@ PRIVATE int allocf(void)
 			struct pte *pte = getpte(curr_proc, frames[i].addr);
 	
 			if(pte->accessed == 1) {
-				pte->accessed = 0;
+				// pte->accessed = 0;
 				frames[i].age = virtual_time;	
 			}
 			if(pte->accessed == 0) {
-				unsigned tau = 20;
-				unsigned diff = virtual_time - frames[i].age;
-				if(diff > tau){
+				unsigned tau = 100;
+				unsigned diff_time = virtual_time - frames[i].age;
+				if(diff_time > tau){
 					if(swap_out(curr_proc, frames[i].addr)){
 						return -1;
 					}
-				}
-
-				if(diff <= tau){
+				} else {
 					if(oldest == -1 || OLDEST(i, oldest))
 						oldest = i;
 				}
