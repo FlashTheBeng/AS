@@ -266,8 +266,9 @@ PUBLIC void putkpg(void *kpg)
 }
 
 /*============================================================================*
- *                              Paging System                                 *
+ *                                   NRU                                      *
  *============================================================================*/
+
 
 /* Number of page frames. */
 #define NR_FRAMES (UMEM_SIZE/PAGE_SIZE)
@@ -279,9 +280,29 @@ PRIVATE struct
 {
 	unsigned count; /**< Reference count.     */
 	unsigned age;   /**< Age.                 */
+	unsigned classNRU; /**< Class NRU.            */
 	pid_t owner;    /**< Page owner.          */
 	addr_t addr;    /**< Address of the page. */
-} frames[NR_FRAMES] = {{0, 0, 0, 0},  };
+} frames[NR_FRAMES] = {{0, 0, 0, 0, 0},  };
+
+PRIVATE unsigned getClassNRU(unsigned i){
+	struct pte *pte = getpte(curr_proc,frames[i].addr);
+	if(pte->accessed){
+		if(pte->dirty){
+			return 3;
+		}else{
+			return 2;	
+		}
+	}else{
+		if(pte->dirty){
+			return 1;
+		}else{
+			return 0;	
+		}
+	}
+	return -1;
+}
+
 
 /**
  * @brief Allocates a page frame.
@@ -289,15 +310,16 @@ PRIVATE struct
  * @returns Upon success, the number of the frame is returned. Upon failure, a
  *          negative number is returned instead.
  */
+
+
 PRIVATE int allocf(void)
 {
 	int i;      /* Loop index.  */
-	int oldest; /* Oldest page. */
+	int nru = -1;
 
-	#define OLDEST(x, y) (frames[x].age < frames[y].age)
+	#define NRU(x, y) (frames[x].classNRU < frames[y].classNRU)
 
 	/* Search for a free frame. */
-	oldest = -1;
 	for (i = 0; i < NR_FRAMES; i++)
 	{
 		/* Found it. */
@@ -311,18 +333,24 @@ PRIVATE int allocf(void)
 			if (frames[i].count > 1)
 				continue;
 
-			/* Oldest page found. */
-			if ((oldest < 0) || (OLDEST(i, oldest)))
-				oldest = i;
+			frames[i].classNRU = getClassNRU(i);
+			if(frames[i].classNRU == 0){
+				nru = i;
+				break;
+			}
+
+			if ((nru < 0) || NRU(i,nru)  ){
+				nru = i;
+			}
 		}
 	}
 
 	/* No frame left. */
-	if (oldest < 0)
+	if (nru < 0)
 		return (-1);
 
 	/* Swap page out. */
-	if (swap_out(curr_proc, frames[i = oldest].addr))
+	if (swap_out(curr_proc, frames[i = nru].addr))
 		return (-1);
 
 found:
